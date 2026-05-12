@@ -1,125 +1,79 @@
 #!/usr/bin/env python3
 """
-Генератор RULE-SET для Shadowrocket.
-Проверяет доступность доменов и сохраняет:
-- direct.txt — доступные домены (DIRECT)
-- proxy.txt — недоступные домены (PROXY)
-- ShadowVoice_Live.conf — маленький конфиг, ссылающийся на эти файлы
+Простой генератор RULE-SET для Shadowrocket.
+Всегда создаёт файлы direct.txt, proxy.txt и конфиг.
 """
 
 import os
 import re
-import json
-import sys
 import requests
 import dns.resolver
 from datetime import datetime
-from typing import List, Tuple, Set, Dict
+from typing import List, Tuple, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ========== НАСТРОЙКИ ==========
-RULE_SET_URLS = {
-    "ru": [
-        "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/refs/heads/release/text/direct.txt",
-        "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/ru.list",
-    ],
-    "foreign": [
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Google/Google.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/YouTube/YouTube.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/TikTok/TikTok.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitter/Twitter.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Telegram/Telegram.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Netflix/Netflix.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Discord/Discord.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/GitHub/GitHub.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Spotify/Spotify.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitch/Twitch.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Reddit/Reddit.list",
-    ],
-    "community": [
-        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_community.list",
-    ],
-    "ipchecker": [
-        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_ipchecker.list",
-    ],
-    "geo_detect": [
-        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_geo_detect.list",
-    ],
-}
+RULE_SET_URLS = [
+    "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/refs/heads/release/text/direct.txt",
+    "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/ru.list",
+    "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_community.list",
+    "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_ipchecker.list",
+    "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_geo_detect.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Google/Google.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/YouTube/YouTube.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/TikTok/TikTok.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitter/Twitter.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Telegram/Telegram.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Netflix/Netflix.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Discord/Discord.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/GitHub/GitHub.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Spotify/Spotify.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitch/Twitch.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Reddit/Reddit.list",
+]
 
-FORCE_DIRECT = {
-    "gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru",
-    "alfabank.ru", "mail.ru", "yandex.ru", "ya.ru"
-}
-
-FORCE_PROXY = {
-    "facebook.com", "instagram.com", "twitter.com", "x.com",
-    "youtube.com", "google.com", "gmail.com"
-}
+FORCE_DIRECT = {"gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru", "alfabank.ru"}
+FORCE_PROXY = {"youtube.com", "google.com", "instagram.com", "facebook.com", "twitter.com", "tiktok.com"}
 
 TIMEOUT = 5
 THREADS = 30
-MAX_DOMAINS = 800
+MAX_DOMAINS = 500
 
 # Файлы
-TEMPLATE_FILE = "template.conf"
-OUTPUT_FILE = "ShadowVoice_Live.conf"
 DIRECT_FILE = "direct.txt"
 PROXY_FILE = "proxy.txt"
-DOMAINS_CACHE_FILE = "domains_cache.json"
+CONFIG_FILE = "ShadowVoice_Live.conf"
 
-def load_cached_domains() -> Dict[str, Set[str]]:
-    if os.path.exists(DOMAINS_CACHE_FILE):
-        with open(DOMAINS_CACHE_FILE, "r") as f:
-            data = json.load(f)
-            return {
-                "direct": set(data.get("direct", [])),
-                "proxy": set(data.get("proxy", [])),
-            }
-    return {"direct": set(), "proxy": set()}
+# Репозиторий (замени на свой)
+REPO_BASE = "https://raw.githubusercontent.com/PAE16/shadowvoice-config/main"
 
-def save_cached_domains(direct: Set[str], proxy: Set[str]):
-    with open(DOMAINS_CACHE_FILE, "w") as f:
-        json.dump({
-            "direct": list(direct),
-            "proxy": list(proxy),
-        }, f, indent=2)
+# ========== ФУНКЦИИ ==========
 
-def save_rule_set(direct: Set[str], proxy: Set[str]):
-    """Сохраняет RULE-SET файлы для Shadowrocket"""
-    with open(DIRECT_FILE, "w") as f:
-        for d in sorted(direct):
-            f.write(f"DOMAIN-SUFFIX,{d},DIRECT\n")
-    with open(PROXY_FILE, "w") as f:
-        for d in sorted(proxy):
-            f.write(f"DOMAIN-SUFFIX,{d},PROXY\n")
-    print(f"💾 Сохранено: {len(direct)} доменов в {DIRECT_FILE}, {len(proxy)} в {PROXY_FILE}")
-
-def download_list(url: str) -> List[str]:
+def download_domains(url: str) -> Set[str]:
+    """Скачивает список доменов из URL"""
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200:
-            return []
-        content = r.text
+            return set()
         domains = set()
-        for line in content.splitlines():
+        for line in r.text.splitlines():
             line = line.strip()
             if not line or line.startswith(('#', ';', '//')):
                 continue
             match = re.search(r'DOMAIN(?:-SUFFIX)?,([a-zA-Z0-9.-]+)', line)
             if match:
                 domain = match.group(1).lower()
-                if '*' not in domain and not re.match(r'^\d+\.\d+\.\d+\.\d+$', domain):
+                if '*' not in domain and '.' in domain:
                     domains.add(domain)
-        return list(domains)
-    except Exception as e:
-        print(f"  ❌ Ошибка загрузки: {e}")
-        return []
+        return domains
+    except:
+        return set()
 
-def is_domain_reachable(domain: str) -> bool:
-    if len(domain) > 100 or '..' in domain:
+def is_reachable(domain: str) -> bool:
+    """Проверяет доступность домена"""
+    if len(domain) > 80:
         return False
     try:
         dns.resolver.resolve(domain, 'A', lifetime=TIMEOUT)
@@ -128,40 +82,41 @@ def is_domain_reachable(domain: str) -> bool:
         pass
     try:
         r = requests.get(f"https://{domain}", timeout=TIMEOUT, verify=False)
-        if r.status_code < 500:
-            return True
+        return r.status_code < 500
     except:
-        pass
-    return False
+        return False
 
 def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
-    direct = []
-    proxy = []
+    """Проверяет домены в многопотоке"""
+    direct, proxy = [], []
     print(f"\n🔍 Проверка {len(domains)} доменов...")
-    with ThreadPoolExecutor(max_workers=THREADS) as executor:
-        future_to_domain = {executor.submit(is_domain_reachable, d): d for d in domains}
-        for i, future in enumerate(as_completed(future_to_domain), 1):
-            domain = future_to_domain[future]
+    with ThreadPoolExecutor(max_workers=THREADS) as ex:
+        futures = {ex.submit(is_reachable, d): d for d in domains}
+        for i, f in enumerate(as_completed(futures), 1):
+            d = futures[f]
             try:
-                reachable = future.result()
-                if domain in FORCE_DIRECT:
-                    direct.append(domain)
-                elif domain in FORCE_PROXY:
-                    proxy.append(domain)
-                elif reachable:
-                    direct.append(domain)
+                if d in FORCE_DIRECT or f.result():
+                    direct.append(d)
                 else:
-                    proxy.append(domain)
+                    proxy.append(d)
             except:
-                proxy.append(domain)
+                proxy.append(d)
             if i % 100 == 0:
                 print(f"  Прогресс: {i}/{len(domains)}")
     return direct, proxy
 
-def build_config() -> str:
-    """Генерирует маленький конфиг, ссылающийся на RULE-SET файлы"""
-    repo_base = "https://raw.githubusercontent.com/PAE16/shadowvoice-config/main"
-    
+def save_rule_sets(direct: List[str], proxy: List[str]):
+    """Сохраняет RULE-SET файлы"""
+    with open(DIRECT_FILE, "w") as f:
+        for d in sorted(set(direct)):
+            f.write(f"DOMAIN-SUFFIX,{d},DIRECT\n")
+    with open(PROXY_FILE, "w") as f:
+        for d in sorted(set(proxy)):
+            f.write(f"DOMAIN-SUFFIX,{d},PROXY\n")
+    print(f"\n💾 Сохранено: DIRECT={len(direct)}, PROXY={len(proxy)}")
+
+def generate_config():
+    """Генерирует основной конфиг"""
     config = f"""#!name=ShadowVoice_Live
 #!desc=Adaptive config. Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -173,15 +128,8 @@ skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local, capt
 tun-excluded-routes = 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.88.99.0/24, 192.168.0.0/16, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 255.255.255.255/32, 239.255.255.250/32
 dns-server = system
 dns-direct-system = true
-dns-direct-fallback-proxy = false
-private-ip-answer = true
-use-local-host-item-for-proxy = false
-icmp-auto-reply = false
-always-reject-url-rewrite = false
-udp-policy-not-supported-behaviour = REJECT
 
 [Rule]
-
 # Apple Local
 IP-CIDR,224.0.0.0/4,DIRECT
 IP-CIDR,239.0.0.0/8,DIRECT
@@ -195,7 +143,7 @@ AND,((PROTOCOL,UDP),(DST-PORT,17501)),DIRECT
 # QUIC Block
 AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
 
-# Critical Russian Systems (always DIRECT)
+# Critical Russian (always DIRECT)
 DOMAIN-SUFFIX,gosuslugi.ru,DIRECT
 DOMAIN-SUFFIX,gu-st.ru,DIRECT
 DOMAIN-SUFFIX,esia.gosuslugi.ru,DIRECT
@@ -206,9 +154,9 @@ DOMAIN-SUFFIX,alfabank.ru,DIRECT
 DOMAIN,vstu.ru,DIRECT
 DOMAIN,volstu.ru,DIRECT
 
-# Auto-generated RULE-SET
-RULE-SET,{repo_base}/direct.txt,DIRECT
-RULE-SET,{repo_base}/proxy.txt,PROXY
+# RULE-SET (auto-generated)
+RULE-SET,{REPO_BASE}/direct.txt,DIRECT
+RULE-SET,{REPO_BASE}/proxy.txt,PROXY
 
 # Apple Services (PROXY)
 IP-CIDR,17.0.0.0/8,PROXY,no-resolve
@@ -218,7 +166,7 @@ DOMAIN,api.push.apple.com,PROXY
 DOMAIN-SUFFIX,apple-relay.akamaized.net,PROXY
 DOMAIN-SUFFIX,apple-relay.apple.com,PROXY
 
-# Foreign services (fallback)
+# Foreign fallback
 DOMAIN-SUFFIX,google.com,PROXY
 DOMAIN-SUFFIX,youtube.com,PROXY
 DOMAIN-SUFFIX,instagram.com,PROXY
@@ -246,7 +194,7 @@ IP-CIDR,10.0.0.0/8,DIRECT
 IP-CIDR,172.16.0.0/12,DIRECT
 IP-CIDR,127.0.0.0/8,DIRECT
 
-# Global default
+# Default
 FINAL,PROXY
 
 [Host]
@@ -258,56 +206,41 @@ localhost = 127.0.0.1
 [MITM]
 hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, *chatgpt*
 """
-    return config
+    with open(CONFIG_FILE, "w") as f:
+        f.write(config)
+    print(f"📄 Конфиг сохранён: {CONFIG_FILE}")
 
 def main():
     print("=" * 60)
     print("🚀 Генератор RULE-SET для Shadowrocket")
     print("=" * 60)
 
-    # Загружаем кэш
-    cache = load_cached_domains()
-    print(f"\n📦 Загружено из кэша: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}")
-
-    # Скачиваем новые домены
+    # Скачиваем все домены
     all_domains = set()
-    for source_type, urls in RULE_SET_URLS.items():
-        print(f"\n📥 Скачиваем {source_type.upper()} RULE-SET:")
-        for url in urls:
-            print(f"  Загрузка {url}...")
-            domains = download_list(url)
-            print(f"    Найдено {len(domains)} доменов")
-            all_domains.update(domains)
-
-    # Проверяем только новые домены
-    existing_domains = cache["direct"] | cache["proxy"]
-    new_domains = [d for d in all_domains if d not in existing_domains]
-
+    print("\n📥 Скачивание списков доменов...")
+    for url in RULE_SET_URLS:
+        print(f"  {url.split('/')[-1]}...")
+        all_domains.update(download_domains(url))
     print(f"\n📊 Всего уникальных доменов: {len(all_domains)}")
-    print(f"📊 Уже в кэше: {len(existing_domains)}")
-    print(f"📊 Новых: {len(new_domains)}")
 
-    if new_domains:
-        if len(new_domains) > MAX_DOMAINS:
-            new_domains = new_domains[:MAX_DOMAINS]
-        new_direct, new_proxy = check_domains(new_domains)
-        cache["direct"].update(new_direct)
-        cache["proxy"].update(new_proxy)
-    else:
-        print("\n✅ Новых доменов нет")
+    # Проверяем доступность
+    domains_list = list(all_domains)
+    if len(domains_list) > MAX_DOMAINS:
+        domains_list = domains_list[:MAX_DOMAINS]
+        print(f"⚠️ Для проверки взято первых {MAX_DOMAINS} доменов")
 
-    # Сохраняем
-    save_cached_domains(cache["direct"], cache["proxy"])
-    save_rule_set(cache["direct"], cache["proxy"])
+    direct, proxy = check_domains(domains_list)
 
-    # Генерируем маленький конфиг
-    with open(OUTPUT_FILE, "w") as f:
-        f.write(build_config())
+    # Сохраняем RULE-SET
+    save_rule_sets(direct, proxy)
 
-    print(f"\n✅ Готово!")
-    print(f"📊 DIRECT: {len(cache['direct'])} доменов → {DIRECT_FILE}")
-    print(f"📊 PROXY: {len(cache['proxy'])} доменов → {PROXY_FILE}")
-    print(f"📄 Конфиг: {OUTPUT_FILE}")
+    # Генерируем конфиг
+    generate_config()
+
+    print(f"\n✅ Готово! Файлы созданы:")
+    print(f"   {DIRECT_FILE} — {len(direct)} доменов (DIRECT)")
+    print(f"   {PROXY_FILE} — {len(proxy)} доменов (PROXY)")
+    print(f"   {CONFIG_FILE} — основной конфиг")
 
 if __name__ == "__main__":
     main()
