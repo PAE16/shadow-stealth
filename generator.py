@@ -7,10 +7,11 @@
 import os
 import re
 import json
+import sys
 import requests
 import dns.resolver
 from datetime import datetime
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ========== НАСТРОЙКИ ==========
