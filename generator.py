@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Генератор адаптивного конфига Shadowrocket.
-Добавляет новые домены к существующим, не перезаписывая их.
+Генератор RULE-SET для Shadowrocket.
+Проверяет доступность доменов и сохраняет:
+- direct.txt — доступные домены (DIRECT)
+- proxy.txt — недоступные домены (PROXY)
+- ShadowVoice_Live.conf — маленький конфиг, ссылающийся на эти файлы
 """
 
 import os
@@ -15,7 +18,6 @@ from typing import List, Tuple, Set, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ========== НАСТРОЙКИ ==========
-# Ссылки на RULE-SET с доменами
 RULE_SET_URLS = {
     "ru": [
         "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/refs/heads/release/text/direct.txt",
@@ -47,22 +49,16 @@ RULE_SET_URLS = {
     ],
 }
 
-# Ссылка на список рекламы
-AD_SOURCE = "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Advertising/Advertising_Domain.list"
-
-# Домены, которые всегда DIRECT (даже если недоступны)
 FORCE_DIRECT = {
     "gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru",
     "alfabank.ru", "mail.ru", "yandex.ru", "ya.ru"
 }
 
-# Домены, которые всегда PROXY (даже если доступны)
 FORCE_PROXY = {
     "facebook.com", "instagram.com", "twitter.com", "x.com",
     "youtube.com", "google.com", "gmail.com"
 }
 
-# Параметры проверки
 TIMEOUT = 5
 THREADS = 30
 MAX_DOMAINS = 800
@@ -70,37 +66,41 @@ MAX_DOMAINS = 800
 # Файлы
 TEMPLATE_FILE = "template.conf"
 OUTPUT_FILE = "ShadowVoice_Live.conf"
+DIRECT_FILE = "direct.txt"
+PROXY_FILE = "proxy.txt"
 DOMAINS_CACHE_FILE = "domains_cache.json"
 
-# ========== ФУНКЦИИ ==========
-
 def load_cached_domains() -> Dict[str, Set[str]]:
-    """Загружает кэшированные домены из файла"""
     if os.path.exists(DOMAINS_CACHE_FILE):
         with open(DOMAINS_CACHE_FILE, "r") as f:
             data = json.load(f)
             return {
                 "direct": set(data.get("direct", [])),
                 "proxy": set(data.get("proxy", [])),
-                "ad": set(data.get("ad", [])),
             }
-    return {"direct": set(), "proxy": set(), "ad": set()}
+    return {"direct": set(), "proxy": set()}
 
-def save_cached_domains(direct: Set[str], proxy: Set[str], ad: Set[str]):
-    """Сохраняет кэшированные домены в файл"""
+def save_cached_domains(direct: Set[str], proxy: Set[str]):
     with open(DOMAINS_CACHE_FILE, "w") as f:
         json.dump({
             "direct": list(direct),
             "proxy": list(proxy),
-            "ad": list(ad),
         }, f, indent=2)
 
+def save_rule_set(direct: Set[str], proxy: Set[str]):
+    """Сохраняет RULE-SET файлы для Shadowrocket"""
+    with open(DIRECT_FILE, "w") as f:
+        for d in sorted(direct):
+            f.write(f"DOMAIN-SUFFIX,{d},DIRECT\n")
+    with open(PROXY_FILE, "w") as f:
+        for d in sorted(proxy):
+            f.write(f"DOMAIN-SUFFIX,{d},PROXY\n")
+    print(f"💾 Сохранено: {len(direct)} доменов в {DIRECT_FILE}, {len(proxy)} в {PROXY_FILE}")
+
 def download_list(url: str) -> List[str]:
-    """Скачивает список и извлекает домены"""
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200:
-            print(f"  ⚠️ Ошибка {r.status_code} при скачивании {url}")
             return []
         content = r.text
         domains = set()
@@ -115,11 +115,10 @@ def download_list(url: str) -> List[str]:
                     domains.add(domain)
         return list(domains)
     except Exception as e:
-        print(f"  ❌ Ошибка загрузки {url}: {e}")
+        print(f"  ❌ Ошибка загрузки: {e}")
         return []
 
 def is_domain_reachable(domain: str) -> bool:
-    """Проверяет доступность домена (DNS + HTTPS)"""
     if len(domain) > 100 or '..' in domain:
         return False
     try:
@@ -136,10 +135,9 @@ def is_domain_reachable(domain: str) -> bool:
     return False
 
 def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
-    """Проверяет список доменов в многопотоке"""
     direct = []
     proxy = []
-    print(f"\n🔍 Проверка {len(domains)} доменов ({THREADS} потоков)...")
+    print(f"\n🔍 Проверка {len(domains)} доменов...")
     with ThreadPoolExecutor(max_workers=THREADS) as executor:
         future_to_domain = {executor.submit(is_domain_reachable, d): d for d in domains}
         for i, future in enumerate(as_completed(future_to_domain), 1):
@@ -156,37 +154,120 @@ def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
                     proxy.append(domain)
             except:
                 proxy.append(domain)
-            if i % 100 == 0 or i == len(domains):
-                print(f"  Прогресс: {i}/{len(domains)} доменов")
+            if i % 100 == 0:
+                print(f"  Прогресс: {i}/{len(domains)}")
     return direct, proxy
 
-def build_config(direct_domains: List[str], proxy_domains: List[str], ad_rules: List[str]) -> str:
-    """Собирает конфиг из шаблона"""
-    if not os.path.exists(TEMPLATE_FILE):
-        print(f"❌ Шаблон {TEMPLATE_FILE} не найден!")
-        sys.exit(1)
+def build_config() -> str:
+    """Генерирует маленький конфиг, ссылающийся на RULE-SET файлы"""
+    repo_base = "https://raw.githubusercontent.com/PAE16/shadowvoice-config/main"
+    
+    config = f"""#!name=ShadowVoice_Live
+#!desc=Adaptive config. Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
-        template = f.read()
+[General]
+bypass-system = true
+ipv6 = false
+prefer-ipv6 = false
+skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local, captive.apple.com
+tun-excluded-routes = 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.88.99.0/24, 192.168.0.0/16, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 255.255.255.255/32, 239.255.255.250/32
+dns-server = system
+dns-direct-system = true
+dns-direct-fallback-proxy = false
+private-ip-answer = true
+use-local-host-item-for-proxy = false
+icmp-auto-reply = false
+always-reject-url-rewrite = false
+udp-policy-not-supported-behaviour = REJECT
 
-    direct_block = "\n".join(f"DOMAIN-SUFFIX,{d},DIRECT" for d in sorted(set(direct_domains)))
-    proxy_block = "\n".join(f"DOMAIN-SUFFIX,{d},PROXY" for d in sorted(set(proxy_domains)))
-    ad_block = "\n".join(ad_rules)
+[Rule]
 
-    result = template.replace("{{DIRECT_DOMAINS}}", direct_block)
-    result = result.replace("{{PROXY_DOMAINS}}", proxy_block)
-    result = result.replace("{{AD_RULES}}", ad_block)
-    result = result.replace("{{date}}", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    return result
+# Apple Local
+IP-CIDR,224.0.0.0/4,DIRECT
+IP-CIDR,239.0.0.0/8,DIRECT
+IP-CIDR,169.254.0.0/16,DIRECT
+DOMAIN-SUFFIX,local,DIRECT
+AND,((PROTOCOL,UDP),(DST-PORT,5353)),DIRECT
+AND,((PROTOCOL,UDP),(DST-PORT,5350)),DIRECT
+AND,((PROTOCOL,UDP),(DST-PORT,17500)),DIRECT
+AND,((PROTOCOL,UDP),(DST-PORT,17501)),DIRECT
+
+# QUIC Block
+AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
+
+# Critical Russian Systems (always DIRECT)
+DOMAIN-SUFFIX,gosuslugi.ru,DIRECT
+DOMAIN-SUFFIX,gu-st.ru,DIRECT
+DOMAIN-SUFFIX,esia.gosuslugi.ru,DIRECT
+DOMAIN-SUFFIX,tbank.ru,DIRECT
+DOMAIN-SUFFIX,sberbank.ru,DIRECT
+DOMAIN-SUFFIX,vtb.ru,DIRECT
+DOMAIN-SUFFIX,alfabank.ru,DIRECT
+DOMAIN,vstu.ru,DIRECT
+DOMAIN,volstu.ru,DIRECT
+
+# Auto-generated RULE-SET
+RULE-SET,{repo_base}/direct.txt,DIRECT
+RULE-SET,{repo_base}/proxy.txt,PROXY
+
+# Apple Services (PROXY)
+IP-CIDR,17.0.0.0/8,PROXY,no-resolve
+DOMAIN-SUFFIX,icloud.com,PROXY
+DOMAIN-SUFFIX,icloud-content.com,PROXY
+DOMAIN,api.push.apple.com,PROXY
+DOMAIN-SUFFIX,apple-relay.akamaized.net,PROXY
+DOMAIN-SUFFIX,apple-relay.apple.com,PROXY
+
+# Foreign services (fallback)
+DOMAIN-SUFFIX,google.com,PROXY
+DOMAIN-SUFFIX,youtube.com,PROXY
+DOMAIN-SUFFIX,instagram.com,PROXY
+DOMAIN-SUFFIX,facebook.com,PROXY
+DOMAIN-SUFFIX,twitter.com,PROXY
+DOMAIN-SUFFIX,t.me,PROXY
+DOMAIN-SUFFIX,telegram.org,PROXY
+DOMAIN-SUFFIX,tiktok.com,PROXY
+DOMAIN-SUFFIX,openai.com,PROXY
+DOMAIN-SUFFIX,chatgpt.com,PROXY
+DOMAIN-SUFFIX,reddit.com,PROXY
+DOMAIN-SUFFIX,discord.com,PROXY
+DOMAIN-SUFFIX,github.com,PROXY
+DOMAIN-SUFFIX,netflix.com,PROXY
+DOMAIN-SUFFIX,spotify.com,PROXY
+DOMAIN-SUFFIX,twitch.tv,PROXY
+DOMAIN-SUFFIX,zoom.us,PROXY
+
+# GeoIP
+GEOIP,RU,DIRECT
+
+# Local networks
+IP-CIDR,192.168.0.0/16,DIRECT
+IP-CIDR,10.0.0.0/8,DIRECT
+IP-CIDR,172.16.0.0/12,DIRECT
+IP-CIDR,127.0.0.0/8,DIRECT
+
+# Global default
+FINAL,PROXY
+
+[Host]
+localhost = 127.0.0.1
+
+[URL Rewrite]
+^http://.*$ https://$0 302
+
+[MITM]
+hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, *chatgpt*
+"""
+    return config
 
 def main():
     print("=" * 60)
-    print("🚀 Генератор адаптивного конфига Shadowrocket (с добавлением доменов)")
+    print("🚀 Генератор RULE-SET для Shadowrocket")
     print("=" * 60)
 
-    # Загружаем кэшированные домены
+    # Загружаем кэш
     cache = load_cached_domains()
-    print(f"\n📦 Загружено из кэша: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
+    print(f"\n📦 Загружено из кэша: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}")
 
     # Скачиваем новые домены
     all_domains = set()
@@ -198,50 +279,35 @@ def main():
             print(f"    Найдено {len(domains)} доменов")
             all_domains.update(domains)
 
-    # Проверяем только новые домены (которых нет в кэше)
+    # Проверяем только новые домены
     existing_domains = cache["direct"] | cache["proxy"]
     new_domains = [d for d in all_domains if d not in existing_domains]
 
-    print(f"\n📊 Всего уникальных доменов в источниках: {len(all_domains)}")
-    print(f"📊 Из них уже есть в кэше: {len(existing_domains)}")
-    print(f"📊 Новых доменов для проверки: {len(new_domains)}")
+    print(f"\n📊 Всего уникальных доменов: {len(all_domains)}")
+    print(f"📊 Уже в кэше: {len(existing_domains)}")
+    print(f"📊 Новых: {len(new_domains)}")
 
     if new_domains:
-        # Проверяем только новые домены
         if len(new_domains) > MAX_DOMAINS:
-            print(f"\n⚠️ Для пинга взято первых {MAX_DOMAINS} новых доменов из {len(new_domains)}")
             new_domains = new_domains[:MAX_DOMAINS]
-
         new_direct, new_proxy = check_domains(new_domains)
-
-        # Добавляем новые домены к кэшу
         cache["direct"].update(new_direct)
         cache["proxy"].update(new_proxy)
     else:
-        print("\n✅ Новых доменов нет, проверка не требуется")
-        new_direct, new_proxy = [], []
+        print("\n✅ Новых доменов нет")
 
-    # Скачиваем рекламу (тоже добавляем)
-    print("\n📥 Скачиваем список рекламы...")
-    new_ad_rules = download_list(AD_SOURCE)
-    new_ad = [r for r in new_ad_rules if r not in cache["ad"]]
-    cache["ad"].update(new_ad)
-    print(f"  Добавлено новых рекламных доменов: {len(new_ad)}")
+    # Сохраняем
+    save_cached_domains(cache["direct"], cache["proxy"])
+    save_rule_set(cache["direct"], cache["proxy"])
 
-    # Сохраняем кэш
-    save_cached_domains(cache["direct"], cache["proxy"], cache["ad"])
-    print(f"\n💾 Кэш сохранён: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
+    # Генерируем маленький конфиг
+    with open(OUTPUT_FILE, "w") as f:
+        f.write(build_config())
 
-    # Генерируем конфиг
-    print("\n📝 Генерация конфига...")
-    config = build_config(list(cache["direct"]), list(cache["proxy"]), list(cache["ad"]))
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write(config)
-
-    print(f"\n✅ Конфиг сохранён в {OUTPUT_FILE}")
-    print(f"📊 Итого в конфиге: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
-    print(f"📄 Всего строк: {len(config.splitlines())}")
+    print(f"\n✅ Готово!")
+    print(f"📊 DIRECT: {len(cache['direct'])} доменов → {DIRECT_FILE}")
+    print(f"📊 PROXY: {len(cache['proxy'])} доменов → {PROXY_FILE}")
+    print(f"📄 Конфиг: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
