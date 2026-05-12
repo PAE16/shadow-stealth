@@ -1,6 +1,5 @@
 # ShadowVoice Live — адаптивный конфиг для Shadowrocket
 
-[![Generate Config](https://github.com/ТВОЙ_ЛОГИН/ТВОЙ_РЕПОЗИТОРИЙ/actions/workflows/main.yml/badge.svg)](https://github.com/ТВОЙ_ЛОГИН/ТВОЙ_РЕПОЗИТОРИЙ/actions/workflows/main.yml)
 
 **Автоматический генератор конфига для Shadowrocket.**  
 Скрипт сам проверяет доступность сайтов и решает, какой трафик отправлять через VPN (PROXY), а какой напрямую (DIRECT).
