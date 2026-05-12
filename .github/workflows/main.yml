@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "action@github.com"
-          git add ShadowVoice_Live.conf domains_cache.json
+          git add ShadowVoice_Live.conf direct.txt proxy.txt domains_cache.json
           if git diff --cached --quiet; then
             echo "✅ Изменений нет, пропускаем коммит."
           else
