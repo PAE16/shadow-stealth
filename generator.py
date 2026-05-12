@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Простой генератор RULE-SET для Shadowrocket.
-Всегда создаёт файлы direct.txt, proxy.txt и конфиг.
+Генератор RULE-SET для Shadowrocket.
+TikTok принудительно в PROXY, остальные сервисы проверяются автоматически.
 """
 
 import os
@@ -34,8 +34,18 @@ RULE_SET_URLS = [
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Reddit/Reddit.list",
 ]
 
-FORCE_DIRECT = {"gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru", "alfabank.ru"}
-FORCE_PROXY = {"youtube.com", "google.com", "instagram.com", "facebook.com", "twitter.com", "tiktok.com"}
+# Всегда DIRECT (даже если недоступны)
+FORCE_DIRECT = {
+    "gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru", "alfabank.ru",
+    "yandex.ru", "ya.ru", "vk.com", "ok.ru", "mail.ru"
+}
+
+# Всегда PROXY (даже если доступны) — сюда добавили TikTok
+FORCE_PROXY = {
+    "youtube.com", "google.com", "instagram.com", "facebook.com", "twitter.com",
+    "tiktok.com", "tiktokv.com", "tiktokcdn.com", "musical.ly", "muscdn.com",
+    "openai.com", "chatgpt.com"
+}
 
 TIMEOUT = 5
 THREADS = 30
@@ -52,7 +62,6 @@ REPO_BASE = "https://raw.githubusercontent.com/PAE16/shadowvoice-config/main"
 # ========== ФУНКЦИИ ==========
 
 def download_domains(url: str) -> Set[str]:
-    """Скачивает список доменов из URL"""
     try:
         r = requests.get(url, timeout=15)
         if r.status_code != 200:
@@ -72,7 +81,6 @@ def download_domains(url: str) -> Set[str]:
         return set()
 
 def is_reachable(domain: str) -> bool:
-    """Проверяет доступность домена"""
     if len(domain) > 80:
         return False
     try:
@@ -87,26 +95,30 @@ def is_reachable(domain: str) -> bool:
         return False
 
 def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
-    """Проверяет домены в многопотоке"""
     direct, proxy = [], []
     print(f"\n🔍 Проверка {len(domains)} доменов...")
     with ThreadPoolExecutor(max_workers=THREADS) as ex:
         futures = {ex.submit(is_reachable, d): d for d in domains}
         for i, f in enumerate(as_completed(futures), 1):
             d = futures[f]
-            try:
-                if d in FORCE_DIRECT or f.result():
-                    direct.append(d)
-                else:
-                    proxy.append(d)
-            except:
+            # Принудительные правила
+            if d in FORCE_DIRECT:
+                direct.append(d)
+            elif d in FORCE_PROXY:
                 proxy.append(d)
+            else:
+                try:
+                    if f.result():
+                        direct.append(d)
+                    else:
+                        proxy.append(d)
+                except:
+                    proxy.append(d)
             if i % 100 == 0:
                 print(f"  Прогресс: {i}/{len(domains)}")
     return direct, proxy
 
 def save_rule_sets(direct: List[str], proxy: List[str]):
-    """Сохраняет RULE-SET файлы"""
     with open(DIRECT_FILE, "w") as f:
         for d in sorted(set(direct)):
             f.write(f"DOMAIN-SUFFIX,{d},DIRECT\n")
@@ -116,7 +128,6 @@ def save_rule_sets(direct: List[str], proxy: List[str]):
     print(f"\n💾 Сохранено: DIRECT={len(direct)}, PROXY={len(proxy)}")
 
 def generate_config():
-    """Генерирует основной конфиг"""
     config = f"""#!name=ShadowVoice_Live
 #!desc=Adaptive config. Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -166,25 +177,6 @@ DOMAIN,api.push.apple.com,PROXY
 DOMAIN-SUFFIX,apple-relay.akamaized.net,PROXY
 DOMAIN-SUFFIX,apple-relay.apple.com,PROXY
 
-# Foreign fallback
-DOMAIN-SUFFIX,google.com,PROXY
-DOMAIN-SUFFIX,youtube.com,PROXY
-DOMAIN-SUFFIX,instagram.com,PROXY
-DOMAIN-SUFFIX,facebook.com,PROXY
-DOMAIN-SUFFIX,twitter.com,PROXY
-DOMAIN-SUFFIX,t.me,PROXY
-DOMAIN-SUFFIX,telegram.org,PROXY
-DOMAIN-SUFFIX,tiktok.com,PROXY
-DOMAIN-SUFFIX,openai.com,PROXY
-DOMAIN-SUFFIX,chatgpt.com,PROXY
-DOMAIN-SUFFIX,reddit.com,PROXY
-DOMAIN-SUFFIX,discord.com,PROXY
-DOMAIN-SUFFIX,github.com,PROXY
-DOMAIN-SUFFIX,netflix.com,PROXY
-DOMAIN-SUFFIX,spotify.com,PROXY
-DOMAIN-SUFFIX,twitch.tv,PROXY
-DOMAIN-SUFFIX,zoom.us,PROXY
-
 # GeoIP
 GEOIP,RU,DIRECT
 
@@ -212,10 +204,9 @@ hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, 
 
 def main():
     print("=" * 60)
-    print("🚀 Генератор RULE-SET для Shadowrocket")
+    print("🚀 Генератор RULE-SET для Shadowrocket (TikTok в PROXY)")
     print("=" * 60)
 
-    # Скачиваем все домены
     all_domains = set()
     print("\n📥 Скачивание списков доменов...")
     for url in RULE_SET_URLS:
@@ -223,7 +214,6 @@ def main():
         all_domains.update(download_domains(url))
     print(f"\n📊 Всего уникальных доменов: {len(all_domains)}")
 
-    # Проверяем доступность
     domains_list = list(all_domains)
     if len(domains_list) > MAX_DOMAINS:
         domains_list = domains_list[:MAX_DOMAINS]
@@ -231,13 +221,10 @@ def main():
 
     direct, proxy = check_domains(domains_list)
 
-    # Сохраняем RULE-SET
     save_rule_sets(direct, proxy)
-
-    # Генерируем конфиг
     generate_config()
 
-    print(f"\n✅ Готово! Файлы созданы:")
+    print(f"\n✅ Готово!")
     print(f"   {DIRECT_FILE} — {len(direct)} доменов (DIRECT)")
     print(f"   {PROXY_FILE} — {len(proxy)} доменов (PROXY)")
     print(f"   {CONFIG_FILE} — основной конфиг")
