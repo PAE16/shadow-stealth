@@ -1,96 +1,184 @@
-import requests
+#!/usr/bin/env python3
+"""
+Автоматический генератор конфига для Shadowrocket.
+Проверяет доступность российских доменов и создаёт актуальный конфиг.
+"""
+
 import os
+import sys
+import requests
+import dns.resolver
+from datetime import datetime
+from typing import List, Tuple, Set
+
+# ========== НАСТРОЙКИ ==========
+# Список доменов для проверки (можно вычитывать из внешнего файла)
+DEFAULT_DOMAINS = [
+    "gosuslugi.ru",
+    "tbank.ru",
+    "sberbank.ru",
+    "vtb.ru",
+    "alfabank.ru",
+    "magnit.ru",
+    "5ka.ru",
+    "perekrestok.ru",
+    "ozon.ru",
+    "wildberries.ru",
+    "avito.ru",
+    "yandex.ru",
+    "vk.com",
+    "ok.ru",
+    "mail.ru",
+    "kinopoisk.ru",
+    "2gis.ru",
+    "hh.ru",
+    "cian.ru",
+    "tutu.ru",
+    "rzd.ru",
+]
+
+# Домены, которые всегда должны идти DIRECT (даже если недоступны)
+FORCE_DIRECT = {"gosuslugi.ru", "tbank.ru", "sberbank.ru"}
+
+# Домены, которые всегда должны идти PROXY (даже если доступны)
+FORCE_PROXY = set()
+
+# Файлы
+DOMAINS_FILE = "domains.txt"       # можно вынести список отдельно
+TEMPLATE_FILE = "template.conf"
+OUTPUT_FILE = "ShadowVoice_Live.conf"
+
+# Внешние RULE-SET (российские IP и домены)
+RULE_SET_DIRECT = [
+    "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/refs/heads/release/text/direct.txt",
+    "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/ru.list",
+]
+
+# ========== ФУНКЦИИ ==========
+
+def load_domains_from_file(filename: str) -> List[str]:
+    """Загружает список доменов из файла (если есть)"""
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            return [line.strip() for line in f if line.strip() and not line.startswith("#")]
+    return DEFAULT_DOMAINS
+
+def is_domain_reachable(domain: str, timeout: int = 5) -> bool:
+    """Проверяет доступность домена (DNS + HTTPS)"""
+    # Проверяем DNS
+    try:
+        dns.resolver.resolve(domain, "A", lifetime=timeout)
+        return True
+    except:
+        pass
+
+    # Проверяем HTTPS
+    try:
+        r = requests.get(f"https://{domain}", timeout=timeout, verify=False)
+        if r.status_code < 500:
+            return True
+    except:
+        pass
+
+    return False
+
+def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
+    """Проверяет список доменов, возвращает (direct, proxy)"""
+    direct = []
+    proxy = []
+    print("🔍 Проверка доступности доменов...")
+    for domain in domains:
+        if domain in FORCE_DIRECT:
+            direct.append(domain)
+            print(f"  🔒 {domain} → DIRECT (forced)")
+        elif domain in FORCE_PROXY:
+            proxy.append(domain)
+            print(f"  🔒 {domain} → PROXY (forced)")
+        elif is_domain_reachable(domain):
+            direct.append(domain)
+            print(f"  ✅ {domain} → DIRECT")
+        else:
+            proxy.append(domain)
+            print(f"  ❌ {domain} → PROXY (blocked)")
+    return direct, proxy
+
+def generate_proxy_rules(direct_domains: List[str], proxy_domains: List[str]) -> str:
+    """Генерирует секцию правил для конфига"""
+    lines = []
+
+    # DIRECT правила для российских доменов
+    if direct_domains:
+        lines.append("# ========== ДОМЕНЫ РФ (DIRECT) ==========")
+        for d in sorted(set(direct_domains)):
+            lines.append(f"DOMAIN-SUFFIX,{d},DIRECT")
+        lines.append("")
+
+    # PROXY правила для заблокированных доменов
+    if proxy_domains:
+        lines.append("# ========== ЗАБЛОКИРОВАННЫЕ ДОМЕНЫ (PROXY) ==========")
+        for d in sorted(set(proxy_domains)):
+            lines.append(f"DOMAIN-SUFFIX,{d},PROXY")
+        lines.append("")
+
+    # Базовые зарубежные сервисы (всегда PROXY)
+    lines.append("# ========== ЗАРУБЕЖНЫЕ СЕРВИСЫ (PROXY) ==========")
+    foreign_services = [
+        "youtube.com", "googlevideo.com", "ytimg.com", "youtu.be",
+        "google.com", "gmail.com", "googleapis.com",
+        "instagram.com", "cdninstagram.com", "fbcdn.net",
+        "facebook.com", "whatsapp.com", "whatsapp.net",
+        "twitter.com", "twimg.com", "x.com",
+        "t.me", "telegram.org", "tdesktop.com",
+        "tiktok.com", "tiktokv.com", "tiktokcdn.com",
+        "openai.com", "chatgpt.com", "oaistatic.com", "oaiusercontent.com",
+        "reddit.com", "discord.com", "github.com", "spotify.com",
+        "netflix.com", "twitch.tv", "zoom.us", "notion.so",
+    ]
+    for s in foreign_services:
+        lines.append(f"DOMAIN-SUFFIX,{s},PROXY")
+
+    return "\n".join(lines)
+
+def generate_config(direct_domains: List[str], proxy_domains: List[str]) -> str:
+    """Генерирует полный конфиг из шаблона"""
+    if not os.path.exists(TEMPLATE_FILE):
+        print(f"❌ Шаблон {TEMPLATE_FILE} не найден!")
+        sys.exit(1)
+
+    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+        template = f.read()
+
+    proxy_rules_block = generate_proxy_rules(direct_domains, proxy_domains)
+
+    # Вставляем всё в шаблон
+    result = template.replace("{{PROXY_RULES}}", proxy_rules_block)
+    result = result.replace("{{date}}", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    return result
 
 def main():
-    filename = "ShadowVoice_Live.conf"
-    
-    # 1. Загружаем внешние списки правил (Proxy)
-    proxy_sources = {
-        "YouTube": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/YouTube/YouTube.list",
-        "Instagram": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list",
-        "OpenAI": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list",
-        "TikTok": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/TikTok/TikTok.list",
-        "Twitter": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitter/Twitter.list"
-    }
+    print("=" * 60)
+    print("🚀 Генератор конфига Shadowrocket (адаптивный к блокировкам)")
+    print("=" * 60)
 
-    # 2. Загружаем список рекламы (Reject)
-    ad_source = "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Advertising/Advertising_Domain.list"
+    # 1. Загружаем список доменов
+    domains = load_domains_from_file(DOMAINS_FILE)
+    print(f"📋 Загружено доменов для проверки: {len(domains)}")
 
-    dynamic_proxy_rules = []
-    dynamic_reject_rules = []
+    # 2. Проверяем доступность
+    direct_domains, proxy_domains = check_domains(domains)
 
-    print("Начинаю сбор правил...")
+    # 3. Генерируем конфиг
+    config_content = generate_config(direct_domains, proxy_domains)
 
-    # Собираем прокси-правила
-    for name, url in proxy_sources.items():
-        try:
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200:
-                rules = [l for l in r.text.splitlines() if l and not l.startswith(('#', ';', '//'))]
-                # Форсируем использование PROXY для этих правил
-                formatted = [l.replace("DIRECT", "PROXY").replace("REJECT", "PROXY") for l in rules]
-                dynamic_proxy_rules.extend(formatted)
-                print(f"✅ {name}: добавлено {len(rules)} строк")
-        except:
-            print(f"❌ Ошибка загрузки {name}")
+    # 4. Сохраняем
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(config_content)
 
-    # Собираем рекламу
-    try:
-        r = requests.get(ad_source, timeout=10)
-        if r.status_code == 200:
-            rules = [l for l in r.text.splitlines() if l and not l.startswith(('#', ';', '//'))]
-            dynamic_reject_rules.extend(rules)
-            print(f"✅ Реклама: добавлено {len(rules)} строк")
-    except:
-        print("❌ Ошибка загрузки списка рекламы")
-
-    # 3. Формируем итоговый конфиг
-    template = f"""#!name=ShadowVoice_Live
-#!desc=Stealth Config by AkiCode. Последнее обновление: {{date}}
-
-[General]
-bypass-system = true
-ipv6 = false
-prefer-ipv6 = false
-dns-server = https://1.1.1.2/dns-query, system
-dns-direct-system = true
-skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local, captive.apple.com
-tun-excluded-routes = 10.0.0.0/8, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10
-
-[Rule]
-# --- СЕКЦИЯ 1: РЕКЛАМА (REJECT) ---
-{chr(10).join(dynamic_reject_rules)}
-
-# --- СЕКЦИЯ 2: APPLE & SYSTEM ---
-DOMAIN,facetime.apple.com,PROXY
-DOMAIN,imessage.apple.com,PROXY
-DOMAIN-SUFFIX,icloud.com,PROXY
-DOMAIN-SUFFIX,apple-cloudkit.com,PROXY
-
-# --- СЕКЦИЯ 3: STEALTH RU (Банки и Госуслуги - строго DIRECT + no-resolve) ---
-DOMAIN-SUFFIX,gosuslugi.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,tbank.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,tinkoff.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,sberbank.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,vtb.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,alfabank.ru,DIRECT,no-resolve
-
-# --- СЕКЦИЯ 4: ДИНАМИЧЕСКИЕ ПРОКСИ ---
-{chr(10).join(dynamic_proxy_rules)}
-
-# --- СЕКЦИЯ 5: ФИНАЛЬНЫЙ WHITELIST ---
-DOMAIN-SUFFIX,ru,DIRECT,no-resolve
-GEOIP,RU,DIRECT
-FINAL,PROXY
-"""
-    
-    from datetime import datetime
-    final_content = template.replace("{date}", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(final_content)
-    
-    print(f"Финиш! Файл {filename} готов.")
+    print(f"\n✅ Конфиг сохранён в {OUTPUT_FILE}")
+    print(f"📊 DIRECT: {len(direct_domains)} доменов")
+    print(f"📊 PROXY: {len(proxy_domains)} доменов")
+    print(f"📄 Размер конфига: {len(config_content.splitlines())} строк")
 
 if __name__ == "__main__":
     main()
