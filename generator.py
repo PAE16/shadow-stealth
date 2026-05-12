@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
 Генератор адаптивного конфига Shadowrocket.
-Скачивает RULE-SET с российскими И иностранными доменами,
-пингует их и решает, куда отправить (DIRECT/PROXY).
+Добавляет новые домены к существующим, не перезаписывая их.
 """
 
 import os
 import re
+import json
 import requests
 import dns.resolver
 from datetime import datetime
@@ -35,6 +35,15 @@ RULE_SET_URLS = {
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Twitch/Twitch.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Reddit/Reddit.list",
     ],
+    "community": [
+        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_community.list",
+    ],
+    "ipchecker": [
+        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_ipchecker.list",
+    ],
+    "geo_detect": [
+        "https://raw.githubusercontent.com/misha-tgshv/shadowrocket-configuration-file/main/rules/domains_geo_detect.list",
+    ],
 }
 
 # Ссылка на список рекламы
@@ -53,15 +62,37 @@ FORCE_PROXY = {
 }
 
 # Параметры проверки
-TIMEOUT = 5          # таймаут на проверку одного домена (сек)
-THREADS = 30         # количество параллельных потоков
-MAX_DOMAINS = 800    # максимальное количество доменов для пинга (чтобы не слишком долго)
+TIMEOUT = 5
+THREADS = 30
+MAX_DOMAINS = 800
 
 # Файлы
 TEMPLATE_FILE = "template.conf"
 OUTPUT_FILE = "ShadowVoice_Live.conf"
+DOMAINS_CACHE_FILE = "domains_cache.json"
 
 # ========== ФУНКЦИИ ==========
+
+def load_cached_domains() -> Dict[str, Set[str]]:
+    """Загружает кэшированные домены из файла"""
+    if os.path.exists(DOMAINS_CACHE_FILE):
+        with open(DOMAINS_CACHE_FILE, "r") as f:
+            data = json.load(f)
+            return {
+                "direct": set(data.get("direct", [])),
+                "proxy": set(data.get("proxy", [])),
+                "ad": set(data.get("ad", [])),
+            }
+    return {"direct": set(), "proxy": set(), "ad": set()}
+
+def save_cached_domains(direct: Set[str], proxy: Set[str], ad: Set[str]):
+    """Сохраняет кэшированные домены в файл"""
+    with open(DOMAINS_CACHE_FILE, "w") as f:
+        json.dump({
+            "direct": list(direct),
+            "proxy": list(proxy),
+            "ad": list(ad),
+        }, f, indent=2)
 
 def download_list(url: str) -> List[str]:
     """Скачивает список и извлекает домены"""
@@ -76,11 +107,9 @@ def download_list(url: str) -> List[str]:
             line = line.strip()
             if not line or line.startswith(('#', ';', '//')):
                 continue
-            # Извлекаем домены из строк вида DOMAIN, domain.ru или DOMAIN-SUFFIX, domain.ru
             match = re.search(r'DOMAIN(?:-SUFFIX)?,([a-zA-Z0-9.-]+)', line)
             if match:
                 domain = match.group(1).lower()
-                # Фильтруем wildcard и IP-подобные
                 if '*' not in domain and not re.match(r'^\d+\.\d+\.\d+\.\d+$', domain):
                     domains.add(domain)
         return list(domains)
@@ -92,13 +121,11 @@ def is_domain_reachable(domain: str) -> bool:
     """Проверяет доступность домена (DNS + HTTPS)"""
     if len(domain) > 100 or '..' in domain:
         return False
-    # DNS-проверка
     try:
         dns.resolver.resolve(domain, 'A', lifetime=TIMEOUT)
         return True
     except:
         pass
-    # HTTPS-проверка
     try:
         r = requests.get(f"https://{domain}", timeout=TIMEOUT, verify=False)
         if r.status_code < 500:
@@ -111,7 +138,7 @@ def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
     """Проверяет список доменов в многопотоке"""
     direct = []
     proxy = []
-    print(f"\n🔍 Проверка {len(domains)} доменов ({THREADS} потоков, таймаут {TIMEOUT}с)...")
+    print(f"\n🔍 Проверка {len(domains)} доменов ({THREADS} потоков)...")
     with ThreadPoolExecutor(max_workers=THREADS) as executor:
         future_to_domain = {executor.submit(is_domain_reachable, d): d for d in domains}
         for i, future in enumerate(as_completed(future_to_domain), 1):
@@ -120,21 +147,15 @@ def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
                 reachable = future.result()
                 if domain in FORCE_DIRECT:
                     direct.append(domain)
-                    status = "🔒 DIRECT (forced)"
                 elif domain in FORCE_PROXY:
                     proxy.append(domain)
-                    status = "🔒 PROXY (forced)"
                 elif reachable:
                     direct.append(domain)
-                    status = "✅ DIRECT"
                 else:
                     proxy.append(domain)
-                    status = "❌ PROXY"
-            except Exception as e:
+            except:
                 proxy.append(domain)
-                status = f"⚠️ ERROR → PROXY"
-            # Выводим каждые 50 доменов, чтобы не засорять лог
-            if i % 50 == 0 or i == len(domains):
+            if i % 100 == 0 or i == len(domains):
                 print(f"  Прогресс: {i}/{len(domains)} доменов")
     return direct, proxy
 
@@ -147,7 +168,6 @@ def build_config(direct_domains: List[str], proxy_domains: List[str], ad_rules: 
     with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
         template = f.read()
 
-    # Формируем блоки правил
     direct_block = "\n".join(f"DOMAIN-SUFFIX,{d},DIRECT" for d in sorted(set(direct_domains)))
     proxy_block = "\n".join(f"DOMAIN-SUFFIX,{d},PROXY" for d in sorted(set(proxy_domains)))
     ad_block = "\n".join(ad_rules)
@@ -160,10 +180,14 @@ def build_config(direct_domains: List[str], proxy_domains: List[str], ad_rules: 
 
 def main():
     print("=" * 60)
-    print("🚀 Генератор адаптивного конфига Shadowrocket (русские + иностранные домены)")
+    print("🚀 Генератор адаптивного конфига Shadowrocket (с добавлением доменов)")
     print("=" * 60)
 
-    # 1. Скачиваем ВСЕ RULE-SET (русские и иностранные)
+    # Загружаем кэшированные домены
+    cache = load_cached_domains()
+    print(f"\n📦 Загружено из кэша: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
+
+    # Скачиваем новые домены
     all_domains = set()
     for source_type, urls in RULE_SET_URLS.items():
         print(f"\n📥 Скачиваем {source_type.upper()} RULE-SET:")
@@ -172,34 +196,51 @@ def main():
             domains = download_list(url)
             print(f"    Найдено {len(domains)} доменов")
             all_domains.update(domains)
-    print(f"\n📊 Всего уникальных доменов: {len(all_domains)}")
 
-    # Ограничиваем количество доменов для пинга (чтобы не слишком долго)
-    domains_to_check = list(all_domains)
-    if len(domains_to_check) > MAX_DOMAINS:
-        print(f"\n⚠️ Для пинга взято первых {MAX_DOMAINS} доменов из {len(domains_to_check)}")
-        domains_to_check = domains_to_check[:MAX_DOMAINS]
+    # Проверяем только новые домены (которых нет в кэше)
+    existing_domains = cache["direct"] | cache["proxy"]
+    new_domains = [d for d in all_domains if d not in existing_domains]
 
-    # 2. Скачиваем список рекламы
+    print(f"\n📊 Всего уникальных доменов в источниках: {len(all_domains)}")
+    print(f"📊 Из них уже есть в кэше: {len(existing_domains)}")
+    print(f"📊 Новых доменов для проверки: {len(new_domains)}")
+
+    if new_domains:
+        # Проверяем только новые домены
+        if len(new_domains) > MAX_DOMAINS:
+            print(f"\n⚠️ Для пинга взято первых {MAX_DOMAINS} новых доменов из {len(new_domains)}")
+            new_domains = new_domains[:MAX_DOMAINS]
+
+        new_direct, new_proxy = check_domains(new_domains)
+
+        # Добавляем новые домены к кэшу
+        cache["direct"].update(new_direct)
+        cache["proxy"].update(new_proxy)
+    else:
+        print("\n✅ Новых доменов нет, проверка не требуется")
+        new_direct, new_proxy = [], []
+
+    # Скачиваем рекламу (тоже добавляем)
     print("\n📥 Скачиваем список рекламы...")
-    ad_rules = download_list(AD_SOURCE)
-    print(f"  Найдено {len(ad_rules)} рекламных доменов")
+    new_ad_rules = download_list(AD_SOURCE)
+    new_ad = [r for r in new_ad_rules if r not in cache["ad"]]
+    cache["ad"].update(new_ad)
+    print(f"  Добавлено новых рекламных доменов: {len(new_ad)}")
 
-    # 3. Проверяем доступность доменов
-    direct, proxy = check_domains(domains_to_check)
+    # Сохраняем кэш
+    save_cached_domains(cache["direct"], cache["proxy"], cache["ad"])
+    print(f"\n💾 Кэш сохранён: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
 
-    # 4. Генерируем итоговый конфиг
+    # Генерируем конфиг
     print("\n📝 Генерация конфига...")
-    config = build_config(direct, proxy, ad_rules)
+    config = build_config(list(cache["direct"]), list(cache["proxy"]), list(cache["ad"]))
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(config)
 
     print(f"\n✅ Конфиг сохранён в {OUTPUT_FILE}")
-    print(f"📊 DIRECT: {len(direct)} доменов")
-    print(f"📊 PROXY: {len(proxy)} доменов")
-    print(f"📊 Реклама: {len(ad_rules)} правил")
-    print(f"📄 Всего строк в конфиге: {len(config.splitlines())}")
+    print(f"📊 Итого в конфиге: DIRECT={len(cache['direct'])}, PROXY={len(cache['proxy'])}, AD={len(cache['ad'])}")
+    print(f"📄 Всего строк: {len(config.splitlines())}")
 
 if __name__ == "__main__":
     main()
