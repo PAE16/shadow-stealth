@@ -29,7 +29,7 @@ def main():
     # Вставляем динамические правила в место заполнителя
     final_conf = content.replace("# {DYNAMIC_RULES_PLACEHOLDER}", dynamic_rules)
     
-    with open("S010lvloon_Live.conf", "w", encoding="utf-8") as f:
+    with open("ShadowVoice_Live.conf", "w", encoding="utf-8") as f:
         f.write(final_conf)
 
 if __name__ == "__main__":
