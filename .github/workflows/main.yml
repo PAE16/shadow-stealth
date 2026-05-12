@@ -2,14 +2,15 @@ name: Generate Config
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'        # каждый час
+  workflow_dispatch:            # ручной запуск
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write           # чтобы Actions мог коммитить и пушить
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,10 +31,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "action@github.com"
-          git add ShadowVoice_Live.conf
+          git add ShadowVoice_Live.conf domains_cache.json
           if git diff --cached --quiet; then
-            echo "Изменений нет, пропускаем коммит."
+            echo "✅ Изменений нет, пропускаем коммит."
           else
-            git commit -m "Auto-update: refresh config $(date '+%Y-%m-%d %H:%M')"
+            git commit -m "Auto-update: refresh config and cache $(date '+%Y-%m-%d %H:%M')"
             git push
+            echo "✅ Изменения запушены в репозиторий."
           fi
