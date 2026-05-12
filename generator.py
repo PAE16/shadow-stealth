@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Генератор RULE-SET для Shadowrocket.
-TikTok принудительно в PROXY, остальные сервисы проверяются автоматически.
+Генератор конфига для Shadowrocket.
+На основе твоего ручного конфига.
+TikTok и нейросети — всегда PROXY, российские сайты — DIRECT.
 """
 
 import os
@@ -13,6 +14,7 @@ from typing import List, Tuple, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ========== НАСТРОЙКИ ==========
+# Ссылки на RULE-SET с доменами
 RULE_SET_URLS = [
     "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/refs/heads/release/text/direct.txt",
     "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/ru.list",
@@ -34,17 +36,36 @@ RULE_SET_URLS = [
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Reddit/Reddit.list",
 ]
 
-# Всегда DIRECT (даже если недоступны)
-FORCE_DIRECT = {
-    "gosuslugi.ru", "tbank.ru", "sberbank.ru", "vtb.ru", "alfabank.ru",
-    "yandex.ru", "ya.ru", "vk.com", "ok.ru", "mail.ru"
+# Всегда DIRECT (российские критичные сервисы)
+ALWAYS_DIRECT = {
+    "gosuslugi.ru", "gu-st.ru", "esia.gosuslugi.ru",
+    "tbank.ru", "sberbank.ru", "vtb.ru", "alfabank.ru",
+    "yandex.ru", "ya.ru", "vk.com", "ok.ru", "mail.ru",
+    "ozon.ru", "wildberries.ru", "avito.ru", "kinopoisk.ru",
+    "vstu.ru", "volstu.ru"
 }
 
-# Всегда PROXY (даже если доступны) — сюда добавили TikTok
-FORCE_PROXY = {
-    "youtube.com", "google.com", "instagram.com", "facebook.com", "twitter.com",
+# Всегда PROXY (TikTok, нейросети, соцсети, Google, YouTube)
+ALWAYS_PROXY = {
+    # TikTok
     "tiktok.com", "tiktokv.com", "tiktokcdn.com", "musical.ly", "muscdn.com",
-    "openai.com", "chatgpt.com"
+    # Google / YouTube
+    "google.com", "youtube.com", "googlevideo.com", "googleapis.com",
+    "gstatic.com", "ytimg.com", "ggpht.com", "googleusercontent.com", "gmail.com",
+    # Соцсети
+    "instagram.com", "cdninstagram.com", "facebook.com", "fbcdn.net",
+    "whatsapp.com", "whatsapp.net", "twitter.com", "twimg.com", "x.com", "threads.im",
+    # Нейросети
+    "openai.com", "chatgpt.com", "oaistatic.com", "oaiusercontent.com",
+    "anthropic.com", "claude.ai", "gemini.google.com", "bard.google.com",
+    "deepmind.google", "copilot.microsoft.com", "bing.com", "midjourney.com",
+    "stability.ai", "leonardo.ai", "huggingface.co", "replicate.com",
+    "runwayml.com", "perplexity.ai", "character.ai", "elevenlabs.io",
+    "suno.ai", "udio.com", "grok.com", "x.ai", "poe.com", "you.com", "phind.com",
+    # Другие сервисы
+    "reddit.com", "discord.com", "github.com", "githubusercontent.com",
+    "spotify.com", "scdn.co", "soundcloud.com", "netflix.com", "twitch.tv",
+    "zoom.us", "notion.so", "cloudflare.com", "cloudfront.net"
 }
 
 TIMEOUT = 5
@@ -57,7 +78,7 @@ PROXY_FILE = "proxy.txt"
 CONFIG_FILE = "ShadowVoice_Live.conf"
 
 # Репозиторий (замени на свой)
-REPO_BASE = "https://raw.githubusercontent.com/PAE16/shadowvoice-config/main"
+REPO_BASE = "https://raw.githubusercontent.com/ТВОЙ_ЛОГИН/ТВОЙ_РЕПОЗИТОРИЙ/main"
 
 # ========== ФУНКЦИИ ==========
 
@@ -101,10 +122,9 @@ def check_domains(domains: List[str]) -> Tuple[List[str], List[str]]:
         futures = {ex.submit(is_reachable, d): d for d in domains}
         for i, f in enumerate(as_completed(futures), 1):
             d = futures[f]
-            # Принудительные правила
-            if d in FORCE_DIRECT:
+            if d in ALWAYS_DIRECT:
                 direct.append(d)
-            elif d in FORCE_PROXY:
+            elif d in ALWAYS_PROXY:
                 proxy.append(d)
             else:
                 try:
@@ -137,10 +157,17 @@ ipv6 = false
 prefer-ipv6 = false
 skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local, captive.apple.com
 tun-excluded-routes = 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.88.99.0/24, 192.168.0.0/16, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 255.255.255.255/32, 239.255.255.250/32
-dns-server = system
+dns-server = https://cloudflare-dns.com/dns-query, system
 dns-direct-system = true
+dns-direct-fallback-proxy = false
+private-ip-answer = true
+use-local-host-item-for-proxy = false
+icmp-auto-reply = false
+always-reject-url-rewrite = false
+udp-policy-not-supported-behaviour = REJECT
 
 [Rule]
+
 # Apple Local
 IP-CIDR,224.0.0.0/4,DIRECT
 IP-CIDR,239.0.0.0/8,DIRECT
@@ -154,7 +181,7 @@ AND,((PROTOCOL,UDP),(DST-PORT,17501)),DIRECT
 # QUIC Block
 AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
 
-# Critical Russian (always DIRECT)
+# Critical Russian Systems (always DIRECT)
 DOMAIN-SUFFIX,gosuslugi.ru,DIRECT
 DOMAIN-SUFFIX,gu-st.ru,DIRECT
 DOMAIN-SUFFIX,esia.gosuslugi.ru,DIRECT
@@ -162,10 +189,13 @@ DOMAIN-SUFFIX,tbank.ru,DIRECT
 DOMAIN-SUFFIX,sberbank.ru,DIRECT
 DOMAIN-SUFFIX,vtb.ru,DIRECT
 DOMAIN-SUFFIX,alfabank.ru,DIRECT
+DOMAIN-SUFFIX,yandexmaps.ru,DIRECT
+DOMAIN-SUFFIX,maps.yandex.ru,DIRECT
+DOMAIN-SUFFIX,navi.yandex.ru,DIRECT
 DOMAIN,vstu.ru,DIRECT
 DOMAIN,volstu.ru,DIRECT
 
-# RULE-SET (auto-generated)
+# Mass Russian Rules (RULE-SET)
 RULE-SET,{REPO_BASE}/direct.txt,DIRECT
 RULE-SET,{REPO_BASE}/proxy.txt,PROXY
 
@@ -177,7 +207,7 @@ DOMAIN,api.push.apple.com,PROXY
 DOMAIN-SUFFIX,apple-relay.akamaized.net,PROXY
 DOMAIN-SUFFIX,apple-relay.apple.com,PROXY
 
-# GeoIP
+# GeoIP Russia
 GEOIP,RU,DIRECT
 
 # Local networks
@@ -186,7 +216,7 @@ IP-CIDR,10.0.0.0/8,DIRECT
 IP-CIDR,172.16.0.0/12,DIRECT
 IP-CIDR,127.0.0.0/8,DIRECT
 
-# Default
+# Global Default
 FINAL,PROXY
 
 [Host]
@@ -196,7 +226,7 @@ localhost = 127.0.0.1
 ^http://.*$ https://$0 302
 
 [MITM]
-hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, *chatgpt*
+hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, *chatgpt*, *claude*, *midjourney*, *gemini*, *grok*
 """
     with open(CONFIG_FILE, "w") as f:
         f.write(config)
@@ -204,7 +234,7 @@ hostname = *yandex*, *vk*, *google*, *youtube*, *telegram*, *tiktok*, *openai*, 
 
 def main():
     print("=" * 60)
-    print("🚀 Генератор RULE-SET для Shadowrocket (TikTok в PROXY)")
+    print("🚀 Генератор конфига Shadowrocket (на основе ручного конфига)")
     print("=" * 60)
 
     all_domains = set()
