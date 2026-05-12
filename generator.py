@@ -10,6 +10,7 @@ PROXY_FILE = "proxy.txt"
 # Источники правил
 RULE_SOURCES = {
     "proxy": [
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Telegram/Telegram.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/TikTok/TikTok.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/YouTube/YouTube.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list",
@@ -33,18 +34,16 @@ def download_rules(urls):
     return sorted(list(rules))
 
 def main():
-    print("🚀 Запуск генератора...")
+    print("🚀 Запуск генератора с фиксом для Telegram и TikTok...")
     
     proxy_rules = download_rules(RULE_SOURCES["proxy"])
     direct_rules = download_rules(RULE_SOURCES["direct"])
 
-    # Записываем вспомогательные файлы
     with open(DIRECT_FILE, "w") as f: f.write("\n".join(direct_rules))
     with open(PROXY_FILE, "w") as f: f.write("\n".join(proxy_rules))
 
-    # Формируем основной конфиг
     config_template = f"""#!name=ShadowVoice_Live
-#!desc=Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | TikTok Fix Enabled
+#!desc=Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | TikTok & TG Fix
 
 [General]
 bypass-system = true
@@ -56,25 +55,32 @@ tun-excluded-routes = 10.0.0.0/8, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 19
 skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local, captive.apple.com
 
 [Rule]
+# --- TELEGRAM CRITICAL (Fix) ---
+DOMAIN-KEYWORD,telegram,PROXY
+DOMAIN-SUFFIX,t.me,PROXY
+DOMAIN-SUFFIX,tdesktop.com,PROXY
+IP-CIDR,91.108.4.0/22,PROXY,no-resolve
+IP-CIDR,91.108.8.0/22,PROXY,no-resolve
+IP-CIDR,91.108.12.0/22,PROXY,no-resolve
+IP-CIDR,91.108.16.0/22,PROXY,no-resolve
+IP-CIDR,91.108.56.0/22,PROXY,no-resolve
+IP-CIDR,149.154.160.0/20,PROXY,no-resolve
+
 # --- TIKTOK CRITICAL ---
 DOMAIN-KEYWORD,tiktok,PROXY
 DOMAIN-SUFFIX,tiktokv.com,PROXY
 DOMAIN-SUFFIX,muscdn.com,PROXY
-DOMAIN-SUFFIX,byteoversea.com,PROXY
-DOMAIN-SUFFIX,tik-tokapi.com,PROXY
 
-# --- BLOCK QUIC (TikTok/YT Fix) ---
+# --- BLOCK QUIC ---
 AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
 
-# --- SYSTEM & BANKS (Strict Direct) ---
+# --- SYSTEM & BANKS ---
 DOMAIN-SUFFIX,gosuslugi.ru,DIRECT,no-resolve
 DOMAIN-SUFFIX,tbank.ru,DIRECT,no-resolve
 DOMAIN-SUFFIX,sberbank.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,vtb.ru,DIRECT,no-resolve
-DOMAIN-SUFFIX,alfabank.ru,DIRECT,no-resolve
 
 # --- DYNAMIC RULES ---
-{chr(10).join([r for r in proxy_rules if "tiktok" not in r.lower()])}
+{chr(10).join([r for r in proxy_rules if "telegram" not in r.lower() and "tiktok" not in r.lower()])}
 
 # --- FINAL ---
 DOMAIN-SUFFIX,ru,DIRECT,no-resolve
@@ -84,7 +90,7 @@ FINAL,PROXY
 
     with open(CONFIG_FILE, "w") as f:
         f.write(config_template)
-    print(f"✅ Конфиг {CONFIG_FILE} готов!")
+    print(f"✅ Конфиг готов!")
 
 if __name__ == "__main__":
     main()
