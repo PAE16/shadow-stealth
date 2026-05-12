@@ -1,36 +1,26 @@
 import requests
 
-def get_external_rules():
-    # Загружаем проверенный Rule-Set (например, от комьюнити)
-    # Здесь можно добавить любые внешние ссылки на списки доменов
-    sources = [
-        "https://raw.githubusercontent.com/yebekhe/Telegram-V2ray-Config/main/rules/openai.txt",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list"
-    ]
-    
-    collected_rules = []
-    for url in sources:
-        try:
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                # Фильтруем пустые строки и комментарии
-                lines = [l for l in resp.text.splitlines() if l and not l.startswith("#")]
-                collected_rules.extend(lines)
-        except:
-            continue
-    return "\n".join(collected_rules)
-
 def main():
-    with open("template.conf", "r", encoding="utf-8") as f:
-        content = f.read()
-    
-    dynamic_rules = get_external_rules()
-    
-    # Вставляем динамические правила в место заполнителя
-    final_conf = content.replace("# {DYNAMIC_RULES_PLACEHOLDER}", dynamic_rules)
-    
+    # Твой шаблон
+    template = """[General]
+bypass-system = true
+[Rule]
+# {DYNAMIC_RULES}
+FINAL,PROXY"""
+
+    # Пример получения правил (можешь заменить на свои ссылки)
+    try:
+        # Для теста добавим хотя бы одно правило, чтобы файл не был пустым
+        dynamic_rules = "DOMAIN-SUFFIX,google.com,PROXY\nDOMAIN-SUFFIX,instagram.com,PROXY"
+    except:
+        dynamic_rules = ""
+
+    final_conf = template.replace("# {DYNAMIC_RULES}", dynamic_rules)
+
+    # ВАЖНО: Имя файла должно быть ShadowVoice_Live.conf
     with open("ShadowVoice_Live.conf", "w", encoding="utf-8") as f:
         f.write(final_conf)
+    print("Файл ShadowVoice_Live.conf успешно создан.")
 
 if __name__ == "__main__":
     main()
