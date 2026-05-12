@@ -1,14 +1,15 @@
 name: Generate Config
+
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'   # каждые 6 часов
+  workflow_dispatch:         # ручной запуск
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Даем права на запись явно
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,26 +17,23 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
-      - name: Install Requests
-        run: pip install requests
+      - name: Install dependencies
+        run: |
+          pip install dnspython requests
 
       - name: Run Generator
         run: python generator.py
 
-      - name: Debug - List Files
-        run: ls -la # Показывает список файлов, чтобы мы видели ShadowVoice_Live.conf
-
       - name: Commit and Push Changes
         run: |
-          git config --global user.name "PAE16"
+          git config --global user.name "github-actions[bot]"
           git config --global user.email "action@github.com"
           git add ShadowVoice_Live.conf
-          # Проверяем, есть ли изменения, чтобы не падать с ошибкой "nothing to commit"
           if git diff --cached --quiet; then
             echo "Изменений нет, пропускаем коммит."
           else
-            git commit -m "Auto-update rules: $(date)"
+            git commit -m "Auto-update: refresh config $(date '+%Y-%m-%d %H:%M')"
             git push
           fi
