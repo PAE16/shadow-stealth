@@ -17,7 +17,7 @@
 
 ## 📲 Установка в Shadowrocket
 
-1. Скопируй ссылку на **raw**-версию конфига:
+1. Скопируй ссылку на **raw**-версию конфига: https://raw.githubusercontent.com/PAE16/shadow-stealth/refs/heads/main/ShadowVoice_Live.conf
    
 2. Открой **Shadowrocket** → вкладка **Config** → **+** → **Add from URL**
 
