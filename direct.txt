@@ -1,3 +1,5 @@
+DOMAIN-SUFFIX,tiktok.com,DIRECT
+DOMAIN-SUFFIX,tiktokv.com,DIRECT
 DOMAIN-SUFFIX,2mdn-cn.net,DIRECT
 DOMAIN-SUFFIX,abstractapi.com,DIRECT
 DOMAIN-SUFFIX,adsenseformobileapps.com,DIRECT
