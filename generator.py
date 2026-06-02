@@ -108,7 +108,7 @@ def main():
     full_proxy = full_proxy - full_direct
     
     # Принудительно вычищаем ключевые слова соцсетей из общего списка, так как они вшиты в топ конфига
-    for Service_word in ["telegram", "tiktok", "instagram", "t.me", "tiktokv.com", "orgeo.ru"]:
+    for service_word in ["telegram", "tiktok", "instagram", "t.me", "tiktokv.com", "orgeo.ru"]:
         full_proxy.discard(service_word)
         full_direct.discard(service_word)
 
