@@ -117,6 +117,7 @@ api2.support-kp.com
 apiip.net
 apivoid.com
 appcenter.ms
+appdb.to
 apple-relay.apple.com
 appstorrent.ru
 archive.org
@@ -833,6 +834,7 @@ kinozal
 klik.me
 kotlinconf.com
 kotlinlang.org
+kpapp.link
 l2.io
 labs.google
 lantern.io
@@ -999,6 +1001,7 @@ protonvpn.com
 proxycheck.io
 pscp.tv
 psiphon.ca
+pushbr.com
 pyrobot.org
 quiz.directory
 quora.com
