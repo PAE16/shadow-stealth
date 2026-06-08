@@ -29,8 +29,11 @@ aliexpress.ru
 appsflyersdk.com
 apptracer.ru
 auto.ru
+aviasales.com
+aviasales.ru
 avito.ru
 avito.st
+avs.io
 avto.ru
 avtodor-tr.ru
 beeline.ru
@@ -55,6 +58,7 @@ dbankcloud.ru
 detmir-stats.ru
 detmir.ru
 detmir.st
+dgis.ru
 domopult.ru
 dzen.ru
 dzeninfra.ru
@@ -66,6 +70,7 @@ gazprombank.ru
 gb.ru
 genotek.ru
 geobasket.ru
+gismeteo.com
 gorzdrav.spb.ru
 gosuslugi.ru
 gov.ru
@@ -75,6 +80,7 @@ headhunter.ru
 hh.ru
 ifconfig.me
 imgsmail.ru
+imru.tech
 invitro.ru
 kaspersky-labs.com
 kaspersky.com
@@ -83,6 +89,7 @@ kinopoisk.ru
 koronapay.com
 lamoda.ru
 lemanapro.ru
+lenta.com
 leroymerlin.ru
 lifemart.ru
 lkk-mosobleirc.ru
@@ -109,6 +116,7 @@ nalog.ru
 naydex.net
 ok.ru
 okcdn.ru
+okko.tv
 onelya.ru
 oneme.ru
 onepricecoffee.com
@@ -126,6 +134,7 @@ perekrestok.ru
 pesc.ru
 pochta.ru
 podberi.ru
+premier.one
 punto-switcher.ru
 punto.ru
 qsrapp.ru
@@ -144,6 +153,7 @@ rzd-bonus.ru
 rzd.ru
 saby.ru
 sber.ru
+sberbank.com
 sberbank.ru
 sbis.link
 sbis.ru
@@ -163,6 +173,7 @@ tensor.ru
 tetrika-school.ru
 tinkoff.ru
 trace-flow.ru
+trbcdn.net
 ttk.ru
 uchi.ru
 userapi.com
@@ -205,8 +216,10 @@ vkvideo.ru
 vtb.ru
 wb.ru
 wbbasket.ru
+wbstatic.net
 webvisor.com
 webvisor.org
+wildberries.by
 wildberries.ru
 x5.ru
 x5club.ru
