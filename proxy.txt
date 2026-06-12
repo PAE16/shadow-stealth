@@ -111,6 +111,7 @@ anzu-us.com
 aol.com
 api.imem.app
 api.ipify.org
+api.sponsor.ajay.app
 api.statsig.com
 api.swiftgram.app
 api2.support-kp.com
@@ -1053,6 +1054,7 @@ sora.com
 soundcloud.com
 speedtest.net
 splunkcloud.com
+sponsor.ajay.app
 sportsfacebook.com
 sportstream.com
 spotify
