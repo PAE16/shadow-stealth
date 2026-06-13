@@ -231,6 +231,7 @@ e122475.dscg.akamaiedge.net
 elevenlabs.io
 elevenreader.io
 elgato.com
+eu.2gis.com
 euronews.com
 events.statsigapi.net
 exler.ru
@@ -824,6 +825,7 @@ jetbrains.net
 jetbrains.org
 jetbrains.space
 jetbrains.team
+jetphotos.com
 jnn-pa.googleapis.com
 jules.google.com
 kahoot
