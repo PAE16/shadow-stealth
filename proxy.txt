@@ -116,6 +116,7 @@ api.ipify.org
 api.sponsor.ajay.app
 api.statsig.com
 api.swiftgram.app
+api.teleos.club
 api2.support-kp.com
 apiip.net
 apivoid.com
@@ -863,6 +864,7 @@ liverail.tv
 lnkd.in
 lnstagram-help.com
 login-account.net
+m.alador.space
 m.me
 mailfence.com
 mailo.com
@@ -1130,6 +1132,7 @@ thefacebook.com
 thefacebook.net
 thefind.com
 theinstagramhack.com
+themoviedb.org
 threads
 threads.net
 tik-tokapi.com
