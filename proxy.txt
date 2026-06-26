@@ -186,6 +186,7 @@ circlecrewpinkcrowd.com
 clashofclans.com
 clashofclans.inbox.supercell.com
 claude.ai
+claude.com
 claudeusercontent.com
 click-url.com
 client-api.arkoselabs.com
@@ -821,6 +822,7 @@ ipwhois.io
 ipxapi.com
 isnssdk.com
 itdog.info
+jetbrain.cloud
 jetbrains.ai
 jetbrains.com
 jetbrains.io
@@ -955,6 +957,7 @@ office.com
 office365.com
 ogp.me
 ohmyswift.ru
+ondigitalocean.app
 onetrust.com
 oninstagram.com
 online-deals.net
@@ -1045,6 +1048,7 @@ semrush.com
 sentry.io
 setapp.com
 sgpstatp.com
+shipbook.io
 shopfacebook.com
 showmyip.com
 showmyipaddress.com
@@ -1055,6 +1059,7 @@ skladchina.biz
 smtp-mail.outlook.com
 sndcdn.com
 snssdk.com
+soi.lat
 sonyentertainmentnetwork.com
 sora.com
 soundcloud.com
@@ -1069,6 +1074,9 @@ spur.us
 static.cloudflareinsights.com
 statsig.com
 statsigapi.net
+steamcontent.com
+steamserver.net
+steamstatic.com
 stel.com
 stitch.withgoogle.com
 strava.com
@@ -1083,6 +1091,7 @@ tableau.com
 tableausoftware.com
 tableauusercontent.com
 tdesktop.com
+teampowered.com
 teleg.xyz
 telega.one
 telegra.ph
@@ -1252,6 +1261,7 @@ x.ai
 x.com
 xbox.com
 xboxlive.com
+xiaoji.com
 xsts.auth.xboxlive.com
 yogalayout.com
 youtu.be
@@ -1423,6 +1433,7 @@ youtubego.in
 youtubei.googleapis.com
 youtubekids.com
 youtubemobilesupport.com
+youwo.com
 yt-video-upload.l.google.com
 yt.be
 yt3.ggpht.com
