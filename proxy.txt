@@ -222,6 +222,7 @@ deezer.com
 dell.com
 dellcdn.com
 designify.com
+devin.ai
 digitalocean.com
 discord
 dlfacebook.com
