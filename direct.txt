@@ -237,6 +237,7 @@ ozone.ru
 ozonusercontent.com
 payecom.ru
 payment.ru
+paywb.com
 perekrestok.ru
 pesc.ru
 phoenix-ca.ru
@@ -369,6 +370,7 @@ travel-tec.ru
 trbcdn.net
 ttk.ru
 tutu.ru
+twinby.ru
 ubs.com
 uchi.ru
 unidraw.io
@@ -419,6 +421,7 @@ wbstatic.net
 webvisor.com
 webvisor.org
 westernunion.ru
+wibes.ru
 wildberries.by
 wildberries.ru
 x5.ru
@@ -426,10 +429,13 @@ x5club.ru
 x5media.ru
 x5paket.ru
 x5static.net
+xn----7sbbneb6bnecqehhbrn5y.xn--p1ai
 xn--90aifd0az.shop
 xn--90aifd0azb.xn--p1acf
+xn--90aijkdmaud0d.xn--p1ai
 xn--b1aechhj6bof8g5a.site
 xn--d1abkf4ap.fun
+xn--d1acpjx3f.xn--p1ai
 xn--h1ao.site
 xn--p1ai
 ya.ru
