@@ -718,6 +718,7 @@ igtv.com
 iherb.com
 ikea.com
 imap-mail.outlook.com
+imgix.net
 imgur.com
 imstagram.com
 imtagram.com
@@ -1094,6 +1095,7 @@ rutor
 rutracker
 santa-secret.ru
 scdn.co
+scira.ai
 searchgpt.com
 seasonvar.ru
 security.id.supercell.com
@@ -1145,6 +1147,7 @@ surfshark.com
 sxgeo.city
 sypexgeo.net
 t.co
+t3.chat
 tableau.com
 tableausoftware.com
 tableauusercontent.com
@@ -1304,6 +1307,7 @@ wieistmeineip.de
 windows.net
 withgoogle.com
 withyoutube.com
+wordpress.com
 workplace.com
 workplaceusecases.com
 worldhack.com
