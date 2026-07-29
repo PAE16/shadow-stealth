@@ -839,6 +839,7 @@ ipqualityscore.com
 ipquery.io
 ipregistry.co
 iproyal.com
+ipsimple.org
 ipstack.com
 ipstatp.com
 ipv4-check-perf.radar.cloudflare.com
@@ -950,6 +951,7 @@ mycdn.video
 myexternalip.com
 myfbfans.com
 myip.com
+myip.dnsomatic.com
 myip.expert
 myip.la
 myip.link
@@ -978,6 +980,7 @@ nintendoswitch.net
 nintendowifi.net
 nnm-club
 nodedata.io
+nossl.sh
 notebooklm.google.com
 notepad-plus-plus.org
 notion
