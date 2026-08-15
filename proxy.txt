@@ -1127,6 +1127,7 @@ snssdk.com
 soi.lat
 sonyentertainmentnetwork.com
 sora.com
+soundcloud
 soundcloud.com
 speedtest.net
 splunkcloud.com
