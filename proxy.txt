@@ -710,6 +710,7 @@ identrust.com
 ifconfig.co
 ifconfig.es
 ifconfig.io
+ifconfig.me
 ig.me
 igcdn.com
 ign.com
@@ -1329,6 +1330,7 @@ wxug.com
 x-minus.pro
 x.ai
 x.com
+x5static.net
 xbox.com
 xboxlive.com
 xiaoji.com
