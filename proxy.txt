@@ -196,6 +196,7 @@ check-host.net
 checkip.amazonaws.com
 checkip.dyn.com
 checkip.dyndns.org
+checkip.global.api.aws
 checkip.org
 chickstagram.com
 china-facebook.com
