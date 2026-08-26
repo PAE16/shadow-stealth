@@ -106,6 +106,10 @@ ads-twitter.com
 advancediddetection.com
 ahc.ovh
 ai.com
+ai.studio
+aicode.googleapis.com
+aida.googleapis.com
+aisandbox-pa.googleapis.com
 aistudio.google.com
 aka.ms
 algolia.net
@@ -113,7 +117,9 @@ amd.com
 amnezia.org
 analytics.pocketcasts.com
 anthropic.com
+antigravity-pa.googleapis.com
 antigravity-unleash.goog
+antigravity.googleapis.com
 anzu-us.com
 aol.com
 api.alador.space
@@ -210,6 +216,8 @@ claudeusercontent.com
 click-url.com
 client-api.arkoselabs.com
 clients6.google.com
+cloudaicompanion.googleapis.com
+cloudcode-pa.googleapis.com
 cloudflare.com
 cloudfunctions.net
 cms-twdigitalassets.com
@@ -228,6 +236,7 @@ cub.red
 curlmyip.net
 cyberghostvpn.com
 dacebook.com
+daily-cloudcode-pa.googleapis.com
 datacamp.com
 datadoghq.com
 datalore.io
@@ -636,6 +645,7 @@ gameroom.com
 gamesir.com
 geller-pa.googleapis.com
 gemini.google.com
+gemini.gstatic.com
 generativeai.google
 generativelanguage.googleapis.com
 geodatatool.com
@@ -887,6 +897,7 @@ kpdl.link
 ktor.io
 l2.io
 labs.google
+labs.google.com
 lantern.io
 launchdarkly.com
 legra.ph
@@ -984,7 +995,10 @@ nintendowifi.net
 nnm-club
 nodedata.io
 nossl.sh
+notebook.google.com
+notebooklm-pa.googleapis.com
 notebooklm.google.com
+notebooklm.googleapis.com
 notepad-plus-plus.org
 notion
 notionusercontent.com
@@ -1021,6 +1035,7 @@ oninstagram.com
 online-deals.net
 online-instagram.com
 onlineinstagram.com
+opal.google.com
 openai
 openai-api.arkoselabs.com
 openai.com
@@ -1094,6 +1109,7 @@ relay-api.eu.2gis.com
 remove.bg
 returnyoutubedislikeapi.com
 rezka
+robinfrontend-pa.googleapis.com
 rocksdb.com
 rocksdb.net
 rocksdb.org
