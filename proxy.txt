@@ -95,6 +95,7 @@ achat-followers-instagram.com
 acheter-followers-instagram.com
 acheterdesfollowersinstagram.com
 acheterfollowersinstagram.com
+addr.tools
 adguard
 adguard.com
 adobe
@@ -200,10 +201,13 @@ chatgpt.com
 chatgpt.livekit.cloud
 check-host.net
 checkip.amazonaws.com
+checkip.com.vn
 checkip.dyn.com
 checkip.dyndns.org
 checkip.global.api.aws
 checkip.org
+checkip.sh
+checkmyip.now
 chickstagram.com
 china-facebook.com
 circlecrewpinkcrowd.com
@@ -231,6 +235,7 @@ contentstack.io
 contest.com
 copilot.microsoft.com
 country.is
+criminalip.io
 crowdtangle.com
 cub.red
 curlmyip.net
@@ -257,6 +262,7 @@ digitalocean.com
 discord
 dlfacebook.com
 dns.controld.com
+dnsleaktest.com
 dotfacebook.com
 dotfacebook.net
 draftjs.org
@@ -656,6 +662,7 @@ geoplugin.net
 get-ipv4.com
 get-ipv6.com
 getipintel.net
+getjsonip.com
 getoutline.org
 gfacecbook.com
 gfw.ovh
@@ -736,6 +743,7 @@ imgix.net
 imgur.com
 imstagram.com
 imtagram.com
+infosniper.net
 instaadder.com
 instachecker.com
 instafallow.com
@@ -824,6 +832,7 @@ ipaddr.site
 ipaddress.com
 ipaddress.my
 ipaddress.sh
+ipaddress.to
 ipapi.co
 ipapi.com
 ipapi.is
@@ -866,6 +875,7 @@ ipv4.internet.yandex.net
 ipv6-check-perf.radar.cloudflare.com
 ipv6-internet.yandex.net
 ipv6.internet.yandex.net
+ipv6ready.me
 ipverify.com
 ipw.cn
 ipwho.is
@@ -885,6 +895,7 @@ jetbrains.space
 jetbrains.team
 jetphotos.com
 jnn-pa.googleapis.com
+jsonip.com
 jules.google.com
 kahoot
 kaleido.ai
@@ -1134,6 +1145,7 @@ reactjs.com
 reactjs.org
 realguide.com
 realip.cc
+reallyfreegeoip.org
 recoiljs.org
 recraft.ai
 redis.io
@@ -1254,6 +1266,22 @@ tellapart.com
 temu.com
 terraform.io
 terragraph.com
+test-ipv6.alpinedc.ch
+test-ipv6.ams.vr.org
+test-ipv6.arauc.br
+test-ipv6.cl
+test-ipv6.com
+test-ipv6.csclub.uwaterloo.ca
+test-ipv6.cz
+test-ipv6.fratec.net
+test-ipv6.jp
+test-ipv6.nl
+test-ipv6.noroutetohost.net
+test-ipv6.roedu.net
+test-ipv6.run
+test-ipv6.se
+testipv6.cn
+testipv6.de
 tg.dev
 tg.org
 tgram.org
@@ -1336,6 +1364,7 @@ webrtc.chatgpt.com
 wgetip.com
 whatismyip.akamai.com
 whatismyip.com
+whatismyip.io
 whatismyip.net
 whatismyip.org
 whatismyipaddress.com
