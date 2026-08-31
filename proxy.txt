@@ -157,6 +157,8 @@ babook.org
 bard.google.com
 basecamp.com
 basecampapi.com
+bgp.he.net
+bgp.tools
 bigdatacloud.net
 bing.com
 bingapis.com
