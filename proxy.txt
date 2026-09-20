@@ -124,6 +124,7 @@ antigravity.googleapis.com
 anzu-us.com
 aol.com
 api.alador.space
+api.epicgames.dev
 api.imem.app
 api.ios-kp.store
 api.ipify.org
@@ -599,6 +600,7 @@ find-my-ip.com
 find-my-ip.net
 findip.net
 firefly-ps.adobe.io
+firstlook.gg
 fitbit.com
 flagfox.net
 flexcdn.cloud
@@ -932,6 +934,7 @@ linkedin.sc.omtrdc.net
 linktr.ee
 live.com
 live.net
+live.wardogs.bulkhead.pragmaengine.com
 liverail.com
 liverail.tv
 lnkd.in
