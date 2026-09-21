@@ -265,6 +265,7 @@ digitalocean.com
 discord
 dlfacebook.com
 dns.controld.com
+dnscheck.tools
 dnsleaktest.com
 dotfacebook.com
 dotfacebook.net
@@ -863,6 +864,8 @@ iplocate.io
 iplocation.com
 iplocation.io
 iplocation.net
+iplogger.com
+iplogger.org
 iplookup.it
 ipme.co
 ipme.in
@@ -997,6 +1000,7 @@ myip.eu
 myip.expert
 myip.fi
 myip.ge
+myip.happ.su
 myip.hk
 myip.id
 myip.is
