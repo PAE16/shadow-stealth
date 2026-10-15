@@ -184,6 +184,9 @@ canva-apps.com
 canva.com
 canva.dev
 capcut.com
+capcutapi.com
+capcutapi.us
+capcutstatic.com
 careersatfb.com
 carstagram.com
 cdn-service.space
