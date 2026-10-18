@@ -1192,6 +1192,7 @@ shipbook.io
 shopfacebook.com
 showmyip.com
 showmyipaddress.com
+sideloadly.io
 sidestore.io
 sketchup.com
 skladchik.com
