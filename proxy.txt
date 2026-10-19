@@ -1061,6 +1061,7 @@ notebooklm.googleapis.com
 notepad-plus-plus.org
 notion
 notionusercontent.com
+nousresearch.com
 novaya.no
 novayagazeta.eu
 novayagazeta.ru
