@@ -2471,6 +2471,7 @@ telegram.website
 telegram.xyz
 telegramapp.org
 telegramdownload.com
+teleos.club
 telesco.pe
 telize.com
 telize.net
